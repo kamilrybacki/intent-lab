@@ -1,0 +1,14 @@
+# HS API keys
+.hs_key
+
+# Environment / secrets
+.env
+*.env
+
+# Experiment results
+results/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
