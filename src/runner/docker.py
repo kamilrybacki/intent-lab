@@ -8,7 +8,14 @@ import tempfile
 from pathlib import Path
 
 from src.common.console import C, ok, warn
-from src.common.constants import AGENT_PROMPT, CCR_HOST, CCR_PORT, DOCKER_IMAGE
+from src.common.constants import (
+    AGENT_MAX_TURNS,
+    AGENT_PROMPT,
+    AGENT_TIMEOUT_SECS,
+    CCR_HOST,
+    CCR_PORT,
+    DOCKER_IMAGE,
+)
 from src.runner.agent import Agent
 
 
@@ -38,6 +45,7 @@ def run_agent(agent: Agent, ccr_api_key: str, log_dir: Path) -> Agent:
         "--add-host", f"{CCR_HOST}:host-gateway",
         DOCKER_IMAGE,
         "--dangerously-skip-permissions",
+        "--max-turns", str(AGENT_MAX_TURNS),
         "--append-system-prompt-file", agent.intent_file,
         "-p", AGENT_PROMPT,
     ]
@@ -47,13 +55,19 @@ def run_agent(agent: Agent, ccr_api_key: str, log_dir: Path) -> Agent:
 
     try:
         with open(log_file, "w") as flog:
-            result = subprocess.run(cmd, stdout=flog, stderr=subprocess.STDOUT)
+            result = subprocess.run(
+                cmd, stdout=flog, stderr=subprocess.STDOUT,
+                timeout=AGENT_TIMEOUT_SECS,
+            )
         if result.returncode == 0:
             agent.status = "completed"
             ok(f"{agent.agent_id} finished (exit 0).")
         else:
             agent.status = "failed"
             warn(f"{agent.agent_id} finished with exit code {result.returncode}.")
+    except subprocess.TimeoutExpired:
+        agent.status = "failed"
+        warn(f"{agent.agent_id} timed out after {AGENT_TIMEOUT_SECS}s — killing container.")
     except Exception as exc:
         agent.status = "failed"
         warn(f"{agent.agent_id} docker error: {exc}")

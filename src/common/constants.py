@@ -26,3 +26,7 @@ AGENT_PROMPT = (
     "Begin building immediately and execute your 50 simulation cycles "
     "to achieve your objective."
 )
+
+# Agent guardrails
+AGENT_MAX_TURNS = 200        # max agentic round-trips per agent
+AGENT_TIMEOUT_SECS = 30 * 60  # hard wall-clock timeout (30 minutes)
