@@ -8,7 +8,7 @@ An experiment measuring how a single natural-language **intent statement** — a
 
 ## The setup
 
-Each agent is a **City Mayor**: an autonomous Claude Code instance connected to the [Micropolis](https://github.com/anthropics/hallucinating-splines) city-simulation engine via an MCP server. Every agent receives the same scaffolding prompt (`CLAUDE.md`) that describes its role, available tools, and the constraint of exactly 50 simulation cycles. The only variable is a short intent file injected into the system prompt.
+Each agent is a **City Mayor**: an autonomous Claude Code instance connected to the [Micropolis](https://github.com/anthropics/hallucinating-splines) city-simulation engine via an MCP server. Every agent receives the same scaffolding prompt (`CLAUDE.md`) that describes its role, available tools, a strategy reference covering Micropolis mechanics, and the constraint of exactly 150 simulation cycles (~12.5 simulated years). The only variable is a short intent file injected into the system prompt.
 
 ### Two intents, one environment
 
@@ -32,7 +32,7 @@ Everything else — the model, the Docker image, the MCP server endpoint, the bu
 │       ├── .claude/mcp.json  (API key injected)               │
 │       └── intent_{a,b}.txt  (the only difference)            │
 │    3. Launch Agent A + Agent B in parallel (Docker sandbox)  │
-│    4. Each agent runs 50 simulation cycles autonomously      │
+│    4. Each agent runs 150 simulation cycles autonomously     │
 │    5. Retire both cities, free slots for next pair            │
 │                                                              │
 │  After all pairs:                                            │
@@ -50,7 +50,7 @@ Everything else — the model, the Docker image, the MCP server endpoint, the bu
 
 ### Agent execution
 
-Agents are launched using the official [Claude Code Docker image](https://github.com/anthropics/claude-code) with `--dangerously-skip-permissions`. Each agent connects to a local [claude-code-router](https://github.com/anthropics/claude-code-router) instance for API routing, allowing the experiment to target any supported model backend.
+Agents are launched using the official [Claude Code Docker image](https://github.com/anthropics/claude-code) with `--dangerously-skip-permissions`, `--max-turns 450`, and `--output-format stream-json`. Each agent connects to a local [claude-code-router](https://github.com/anthropics/claude-code-router) instance for API routing, allowing the experiment to target any supported model backend. A 45-minute wall-clock timeout on `subprocess.Popen` provides a hard stop if an agent stalls.
 
 ## Evaluation
 
@@ -89,7 +89,7 @@ intent-lab/
 ├── run_experiment.py          # Entry point: run N pairs
 ├── evaluate_intent.py         # Entry point: evaluate results
 ├── docker-compose.yml         # Redis for persistent storage
-├── requirements.txt           # Python dependencies (redis)
+├── requirements.txt           # Python dependencies (redis, structlog)
 ├── assets/
 │   ├── intents/
 │   │   ├── intent_a.txt       # Metric Optimization prompt
@@ -100,13 +100,15 @@ intent-lab/
 └── src/
     ├── common/                 # Shared utilities
     │   ├── console.py          # ANSI logging helpers
-    │   ├── constants.py        # Paths, URLs, Docker image tag
+    │   ├── constants.py        # Paths, URLs, guardrails
     │   ├── http.py             # stdlib HTTP client with retry
+    │   ├── logging.py          # structlog config (console + JSON file)
     │   └── redis.py            # Redis connection + data access
     ├── runner/                 # Experiment execution
     │   ├── agent.py            # Agent data model
     │   ├── cli.py              # Sequential-pair runner logic
-    │   ├── docker.py           # Docker sandbox launcher
+    │   ├── docker.py           # Docker sandbox + token tracking
+    │   ├── healthcheck.py      # Periodic city stats poller
     │   └── provisioning.py     # API key + city lifecycle
     └── evaluator/              # Post-run analysis
         ├── cli.py              # Evaluation CLI
@@ -115,6 +117,15 @@ intent-lab/
         ├── report.py           # Report generation (single/pool/cross-run)
         └── stats.py            # mean, stdev, median, formatting
 ```
+
+## Observability
+
+While agents run, two background monitors emit structured logs via `structlog`:
+
+- **Health checks** (every 30s) — polls the Hallucinating Splines API for each city's population, score, funds, and game year. Written to `results/<ts>/healthcheck.jsonl`.
+- **Token usage** (every 5s) — tracks cumulative input/output tokens, cache tokens, cost, and turn count per agent. Written to `results/<ts>/<agent_id>/token_usage.jsonl`.
+
+Both produce console output (human-readable) and JSONL files (machine-readable) for post-run analysis.
 
 ## Prerequisites
 
