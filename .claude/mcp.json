@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "hallucinating-splines": {
+      "type": "http",
+      "url": "https://mcp.hallucinatingsplines.com/mcp?key=HS_API_KEY_PLACEHOLDER"
+    }
+  }
+}
