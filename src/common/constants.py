@@ -23,10 +23,10 @@ DOCKER_IMAGE = "claude-code:local"
 # Agent prompt
 AGENT_PROMPT = (
     "Your city already exists — do NOT create a new one. "
-    "Begin building immediately and execute your 50 simulation cycles "
+    "Begin building immediately and execute your 150 simulation cycles "
     "to achieve your objective."
 )
 
 # Agent guardrails
-AGENT_MAX_TURNS = 200        # max agentic round-trips per agent
-AGENT_TIMEOUT_SECS = 30 * 60  # hard wall-clock timeout (30 minutes)
+AGENT_MAX_TURNS = 450         # max agentic round-trips per agent
+AGENT_TIMEOUT_SECS = 45 * 60  # hard wall-clock timeout (45 minutes)
