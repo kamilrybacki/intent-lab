@@ -53,8 +53,14 @@ class _TokenTracker:
         self._start = time.monotonic()
 
     def update(self, event: dict) -> None:
-        """Extract token usage from a stream-json event."""
-        usage = event.get("usage") or {}
+        """Extract token usage from a stream-json event.
+
+        Usage data can appear in two locations:
+        - Top-level ``event["usage"]`` (final result event)
+        - Nested ``event["message"]["usage"]`` (intermediate assistant events)
+        """
+        # Try top-level first (result event), then nested (assistant events)
+        usage = event.get("usage") or (event.get("message") or {}).get("usage") or {}
         with self._lock:
             self.input_tokens += usage.get("input_tokens", 0)
             self.output_tokens += usage.get("output_tokens", 0)
@@ -112,6 +118,7 @@ def run_agent(agent: Agent, ccr_api_key: str, log_dir: Path) -> Agent:
         "--dangerously-skip-permissions",
         "--max-turns", str(AGENT_MAX_TURNS),
         "--output-format", "stream-json",
+        "--verbose",
         "--append-system-prompt-file", agent.intent_file,
         "-p", AGENT_PROMPT,
     ]

@@ -37,7 +37,7 @@ def get_json_file_logger(log_path: Path) -> structlog.BoundLogger:
     file_handler = logging.FileHandler(str(log_path), mode="a")
     file_handler.setLevel(logging.DEBUG)
 
-    stdlib_logger = logging.getLogger(f"healthcheck.{log_path.stem}")
+    stdlib_logger = logging.getLogger(f"structlog.{log_path}")
     stdlib_logger.handlers = [file_handler]
     stdlib_logger.setLevel(logging.DEBUG)
     stdlib_logger.propagate = False
