@@ -18,7 +18,7 @@ CCR_HOST = "host.docker.internal"
 CCR_PORT = 3456
 
 # Docker — pin to a specific tag; update deliberately
-DOCKER_IMAGE = "ghcr.io/anthropics/claude-code:0.2"
+DOCKER_IMAGE = "claude-code:local"
 
 # Agent prompt
 AGENT_PROMPT = (

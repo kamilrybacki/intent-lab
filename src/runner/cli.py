@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import getpass
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -41,6 +42,23 @@ from src.runner.provisioning import (
     provision_hs_key,
     retire_pair,
 )
+
+
+def _load_dotenv() -> None:
+    """Load variables from .env file into os.environ (no overwrite)."""
+    env_path = PROJECT_ROOT / ".env"
+    if not env_path.is_file():
+        return
+    info(f"Loading environment from {env_path}")
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip("\"'")
+            os.environ.setdefault(key, value)
 
 
 def _load_or_create_key() -> str:
@@ -89,18 +107,27 @@ def main() -> None:
     print()
 
     # ── Collect credentials ──────────────────────────────────────────────
-    ccr_api_key = getpass.getpass(
-        "Enter your claude-code-router API key (ANTHROPIC_AUTH_TOKEN): "
-    )
-    if not ccr_api_key.strip():
-        fail("API key cannot be empty.")
-    ccr_api_key = ccr_api_key.strip()
+    _load_dotenv()
 
-    model_name = input(
-        "Which model is your router configured for? (e.g. deepseek-chat): "
-    ).strip()
-    if not model_name:
-        warn("No model specified — continuing anyway.")
+    ccr_api_key = os.environ.get("ANTHROPIC_AUTH_TOKEN", "").strip()
+    if ccr_api_key:
+        ok("ANTHROPIC_AUTH_TOKEN loaded from environment.")
+    else:
+        ccr_api_key = getpass.getpass(
+            "Enter your claude-code-router API key (ANTHROPIC_AUTH_TOKEN): "
+        ).strip()
+        if not ccr_api_key:
+            fail("API key cannot be empty.")
+
+    model_name = os.environ.get("CCR_MODEL", "").strip()
+    if model_name:
+        ok(f"CCR_MODEL loaded from environment: {model_name}")
+    else:
+        model_name = input(
+            "Which model is your router configured for? (e.g. deepseek-chat): "
+        ).strip()
+        if not model_name:
+            warn("No model specified — continuing anyway.")
     print()
     info(f"Model: {model_name or '<not specified>'}")
 

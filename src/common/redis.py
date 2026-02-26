@@ -8,7 +8,7 @@ import os
 import redis
 
 
-_REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+_REDIS_HOST = os.environ.get("REDIS_HOST", "127.0.0.1")
 _REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 _REDIS_DB = int(os.environ.get("REDIS_DB", "0"))
 _REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", "intent-experiment")
