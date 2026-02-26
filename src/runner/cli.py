@@ -28,6 +28,7 @@ from pathlib import Path
 from src.common.console import C, fail, info, ok, warn
 from src.common.constants import CCR_PORT, PROJECT_ROOT
 from src.common.http import http_get
+from src.common.logging import configure_structlog
 from src.common.redis import (
     peek_hs_key,
     store_agent_result,
@@ -36,6 +37,7 @@ from src.common.redis import (
 )
 from src.runner.agent import Agent
 from src.runner.docker import run_agent
+from src.runner.healthcheck import HealthChecker
 from src.runner.provisioning import (
     create_pair,
     prepare_workspace,
@@ -91,6 +93,8 @@ def main() -> None:
     )
     args = parser.parse_args()
     n_pairs = args.pairs
+
+    configure_structlog()
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     results_dir = PROJECT_ROOT / "results" / timestamp
@@ -191,7 +195,13 @@ def main() -> None:
         # Run both agents in parallel
         info("Launching Agent A + Agent B in parallel ...")
         pair_agents: list[Agent] = []
-        with ThreadPoolExecutor(max_workers=2) as pool:
+        health_targets = [(agent_a.agent_id, city_a_id), (agent_b.agent_id, city_b_id)]
+        with HealthChecker(
+            health_targets,
+            hs_key,
+            log_dir=results_dir,
+            interval=30.0,
+        ), ThreadPoolExecutor(max_workers=2) as pool:
             futures = {
                 pool.submit(
                     run_agent, agent, ccr_api_key,
