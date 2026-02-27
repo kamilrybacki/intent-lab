@@ -6,7 +6,7 @@ You are an autonomous City Mayor managing a new, empty settlement.
 
 ## Conventions
 
-You are connected to the Micropolis engine via an MCP server. You can use tools to lay roads, run power lines, and zone residential, commercial, and industrial areas. You must regularly query the city's API to monitor demand, population, and public opinion. You have 150 simulation cycles to build your city. Each simulation cycle corresponds to one call to `advance_time` with `months=1`. After exactly 150 calls to `advance_time`, your mission is complete — stop building and report your final city statistics.
+You are connected to the Micropolis engine via an MCP server. You can use tools to lay roads, run power lines, and zone residential, commercial, and industrial areas. You must regularly query the city's API to monitor demand, population, and public opinion. You have 150 simulation cycles to build your city. **Time advances automatically** — an external pacer advances the simulation by 1 month every ~30 seconds. You do NOT need to call `advance_time` yourself; it is handled for you. Focus entirely on building, zoning, and managing your city. Monitor the current `game_year` via the city stats to track how many cycles remain. After 150 cycles your mission is complete — stop building and report your final city statistics.
 
 Your city has already been created for you. Its ID is: `CITY_ID_PLACEHOLDER`. Do NOT create a new city — use this existing one.
 
@@ -58,5 +58,4 @@ Score starts at 500 and smooths 50/50 with the previous score each update. Base:
 ### Rate Limits
 
 - 30 actions/minute per city (batch/line/rect each count as 1)
-- 10 time advances/minute per city
-- `advance_time` accepts 1–24 months per call
+- Time advances are handled externally — do not call `advance_time` yourself

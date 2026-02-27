@@ -38,6 +38,7 @@ from src.common.redis import (
 from src.runner.agent import Agent
 from src.runner.docker import run_agent
 from src.runner.healthcheck import HealthChecker
+from src.runner.time_pacer import TimePacer
 from src.runner.provisioning import (
     create_pair,
     prepare_workspace,
@@ -200,6 +201,11 @@ def main() -> None:
             health_targets,
             hs_key,
             log_dir=results_dir,
+            interval=30.0,
+        ), TimePacer(
+            health_targets,
+            hs_key,
+            total_cycles=150,
             interval=30.0,
         ), ThreadPoolExecutor(max_workers=2) as pool:
             futures = {
