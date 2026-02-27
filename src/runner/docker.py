@@ -101,6 +101,18 @@ def _periodic_emitter(tracker: _TokenTracker, stop: threading.Event) -> None:
             tracker.emit()
 
 
+def _watchdog(proc: subprocess.Popen, deadline: float, agent_id: str) -> None:
+    """Background thread: kill the process if it exceeds the deadline."""
+    while proc.poll() is None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            proc.kill()
+            warn(f"{agent_id} timed out after {AGENT_TIMEOUT_SECS}s — killing container.")
+            return
+        # Check every 5 seconds
+        time.sleep(min(remaining, 5.0))
+
+
 def run_agent(agent: Agent, ccr_api_key: str, log_dir: Path) -> Agent:
     """Launch a Docker sandbox for a single agent and wait for it to finish."""
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -144,6 +156,15 @@ def run_agent(agent: Agent, ccr_api_key: str, log_dir: Path) -> Agent:
         )
         emitter_thread.start()
 
+        # Watchdog thread enforces the deadline even if stdout blocks
+        wd_thread = threading.Thread(
+            target=_watchdog,
+            args=(proc, deadline, agent.agent_id),
+            name=f"watchdog-{agent.agent_id}",
+            daemon=True,
+        )
+        wd_thread.start()
+
         with open(log_file, "w") as flog:
             for raw_line in proc.stdout:
                 line = raw_line.decode("utf-8", errors="replace")
@@ -157,21 +178,17 @@ def run_agent(agent: Agent, ccr_api_key: str, log_dir: Path) -> Agent:
                     except json.JSONDecodeError:
                         pass
 
-                if time.monotonic() > deadline:
-                    proc.kill()
-                    agent.status = "failed"
-                    warn(f"{agent.agent_id} timed out after {AGENT_TIMEOUT_SECS}s — killing container.")
-                    break
-
         proc.wait(timeout=10)
 
-        if agent.status != "failed":
-            if proc.returncode == 0:
-                agent.status = "completed"
-                ok(f"{agent.agent_id} finished (exit 0).")
-            else:
-                agent.status = "failed"
-                warn(f"{agent.agent_id} finished with exit code {proc.returncode}.")
+        if proc.returncode == 0:
+            agent.status = "completed"
+            ok(f"{agent.agent_id} finished (exit 0).")
+        elif proc.returncode == -9:
+            agent.status = "failed"
+            # Killed by watchdog — message already emitted
+        else:
+            agent.status = "failed"
+            warn(f"{agent.agent_id} finished with exit code {proc.returncode}.")
 
     except Exception as exc:
         agent.status = "failed"
