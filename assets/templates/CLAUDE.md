@@ -48,8 +48,9 @@ Each zone type hitting its cap applies a **−15% score penalty**. Build the sea
 
 - Tax revenue: `floor(totalPop × landValueAverage / 120) × taxRate × difficultyMultiplier`.
 - Default tax rate is 7%. Higher taxes suppress RCI demand (from +200 bonus at 0% to −600 penalty at 20%) and hurt the score directly (`cityTax × 10`).
-- Bankruptcy (funds at zero for 12 months) pauses the simulation and erodes score and population.
-- Fund police and fire departments fully to avoid score penalties.
+- **CRITICAL: Bankruptcy (funds at zero for 12 months) freezes the simulation** — no time advances will be accepted and your city stops growing entirely. This is the single worst outcome. You must avoid it at all costs.
+- **Never spend more than half your current funds in a single building phase.** Build in small increments, then wait for tax revenue to replenish your treasury before building more. Check your funds after every batch of actions.
+- Fund police and fire departments fully to avoid score penalties, but only after you have enough population to generate tax revenue that covers the operating costs.
 
 ### Scoring (0–1000)
 
