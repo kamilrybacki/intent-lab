@@ -8,7 +8,13 @@ import tempfile
 import time
 from pathlib import Path
 
-from src.common.constants import HS_API, INTENTS_DIR, TEMPLATES_DIR
+from src.common.constants import (
+    HS_API,
+    INTENTS_DIR,
+    SIM_TICK_INTERVAL,
+    SIM_TOTAL_CYCLES,
+    TEMPLATES_DIR,
+)
 from src.common.http import http_delete, http_post
 from src.runner.agent import Agent
 
@@ -85,10 +91,12 @@ def prepare_workspace(agent: Agent) -> Path:
         mcp_path.read_text().replace("HS_API_KEY_PLACEHOLDER", agent.hs_key)
     )
 
-    # Inject the pre-created city ID into CLAUDE.md
+    # Inject all placeholders into CLAUDE.md
     claude_md = workspace / "CLAUDE.md"
-    claude_md.write_text(
-        claude_md.read_text().replace("CITY_ID_PLACEHOLDER", agent.city_id)
-    )
+    text = claude_md.read_text()
+    text = text.replace("CITY_ID_PLACEHOLDER", agent.city_id)
+    text = text.replace("SIM_TOTAL_CYCLES_PLACEHOLDER", str(SIM_TOTAL_CYCLES))
+    text = text.replace("SIM_TICK_INTERVAL_PLACEHOLDER", str(SIM_TICK_INTERVAL))
+    claude_md.write_text(text)
 
     return workspace

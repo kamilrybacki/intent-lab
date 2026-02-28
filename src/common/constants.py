@@ -13,21 +13,22 @@ INTENTS_DIR = ASSETS_DIR / "intents"
 # Hallucinating Splines
 HS_API = "https://api.hallucinatingsplines.com"
 
-# claude-code-router
-CCR_HOST = "host.docker.internal"
-CCR_PORT = 3456
-
 # Docker — pin to a specific tag; update deliberately
 DOCKER_IMAGE = "claude-code:local"
 
-# Agent prompt
+# ── Simulation timing (single source of truth) ──────────────────────────────
+SIM_TOTAL_CYCLES = 50           # number of months to simulate
+SIM_TICK_INTERVAL = 15          # seconds between time advances
+SIM_DURATION_MINS = (SIM_TOTAL_CYCLES * SIM_TICK_INTERVAL) / 60
+
+# Agent prompt (auto-derived from simulation config)
 AGENT_PROMPT = (
     "Your city already exists — do NOT create a new one. "
-    "Time advances automatically every ~30 seconds — do NOT call advance_time yourself. "
+    f"Time advances automatically every ~{SIM_TICK_INTERVAL} seconds — do NOT call advance_time yourself. "
     "Begin building immediately and focus on zoning, infrastructure, and city management. "
-    "You have 150 cycles (~75 minutes of real time)."
+    f"You have {SIM_TOTAL_CYCLES} cycles (~{SIM_DURATION_MINS:.0f} minutes of real time)."
 )
 
 # Agent guardrails
-AGENT_MAX_TURNS = 450         # max agentic round-trips per agent
-AGENT_TIMEOUT_SECS = 80 * 60  # hard wall-clock timeout (80 minutes, covers 150×30s + margin)
+AGENT_MAX_TURNS = 450
+AGENT_TIMEOUT_SECS = int(SIM_DURATION_MINS * 60) + 5 * 60  # sim duration + 5 min margin

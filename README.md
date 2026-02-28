@@ -50,7 +50,7 @@ Everything else — the model, the Docker image, the MCP server endpoint, the bu
 
 ### Agent execution
 
-Agents are launched using the official [Claude Code Docker image](https://github.com/anthropics/claude-code) with `--dangerously-skip-permissions`, `--max-turns 450`, and `--output-format stream-json`. Each agent connects to a local [claude-code-router](https://github.com/anthropics/claude-code-router) instance for API routing, allowing the experiment to target any supported model backend. An 80-minute wall-clock timeout (via a watchdog thread) provides a hard stop if an agent stalls.
+Agents are launched using the official [Claude Code Docker image](https://github.com/anthropics/claude-code) with `--dangerously-skip-permissions`, `--max-turns 450`, and `--output-format stream-json`. Each agent uses the host machine's Claude Code authentication (mounted from `~/.claude/`), eliminating the need for separate API key management. An 80-minute wall-clock timeout (via a watchdog thread) provides a hard stop if an agent stalls.
 
 ## Evaluation
 
@@ -134,8 +134,7 @@ All three produce console output (human-readable) and structured log events for 
 - **Docker** — for sandboxed agent execution
 - **Python 3.12+**
 - **Redis** — for experiment metadata and result caching
-- **claude-code-router** — local API router (must be running on port 3456)
-- A configured model backend (e.g. `deepseek-chat`, `claude-sonnet`, etc.)
+- **Claude Code** — authenticated on your host machine (run `claude-code` once to authenticate)
 
 ## Usage
 

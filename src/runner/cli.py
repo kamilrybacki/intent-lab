@@ -13,7 +13,6 @@ Architecture:
 from __future__ import annotations
 
 import argparse
-import getpass
 import json
 import os
 import shutil
@@ -26,8 +25,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.common.console import C, fail, info, ok, warn
-from src.common.constants import CCR_PORT, PROJECT_ROOT
-from src.common.http import http_get
+from src.common.constants import (
+    PROJECT_ROOT,
+    SIM_TICK_INTERVAL,
+    SIM_TOTAL_CYCLES,
+)
 from src.common.logging import configure_structlog
 from src.common.redis import (
     peek_hs_key,
@@ -111,40 +113,15 @@ def main() -> None:
     info("Each pair: create 2 cities -> run A+B in parallel -> retire cities")
     print()
 
-    # ── Collect credentials ──────────────────────────────────────────────
-    _load_dotenv()
-
-    ccr_api_key = os.environ.get("ANTHROPIC_AUTH_TOKEN", "").strip()
-    if ccr_api_key:
-        ok("ANTHROPIC_AUTH_TOKEN loaded from environment.")
-    else:
-        ccr_api_key = getpass.getpass(
-            "Enter your claude-code-router API key (ANTHROPIC_AUTH_TOKEN): "
-        ).strip()
-        if not ccr_api_key:
-            fail("API key cannot be empty.")
-
-    model_name = os.environ.get("CCR_MODEL", "").strip()
-    if model_name:
-        ok(f"CCR_MODEL loaded from environment: {model_name}")
-    else:
-        model_name = input(
-            "Which model is your router configured for? (e.g. deepseek-chat): "
-        ).strip()
-        if not model_name:
-            warn("No model specified — continuing anyway.")
-    print()
-    info(f"Model: {model_name or '<not specified>'}")
-
-    # ── Verify claude-code-router ────────────────────────────────────────
-    info(f"Checking claude-code-router at http://127.0.0.1:{CCR_PORT} ...")
-    try:
-        http_get(f"http://127.0.0.1:{CCR_PORT}", timeout=5)
-        ok("claude-code-router is alive.")
-    except Exception:
+    # ── Verify Claude Code authentication ────────────────────────────────
+    claude_config = Path.home() / ".claude"
+    if not claude_config.exists():
         fail(
-            f"Cannot reach claude-code-router on port {CCR_PORT}. Run:  ccr start"
+            "Claude Code configuration not found. "
+            "Please authenticate Claude Code first by running: claude-code"
         )
+    ok(f"Using Claude Code authentication from {claude_config}")
+    print()
 
     # ── Provision / load HS key ──────────────────────────────────────────
     hs_key = _load_or_create_key()
@@ -205,12 +182,12 @@ def main() -> None:
         ), TimePacer(
             health_targets,
             hs_key,
-            total_cycles=150,
-            interval=30.0,
+            total_cycles=SIM_TOTAL_CYCLES,
+            interval=float(SIM_TICK_INTERVAL),
         ), ThreadPoolExecutor(max_workers=2) as pool:
             futures = {
                 pool.submit(
-                    run_agent, agent, ccr_api_key,
+                    run_agent, agent,
                     results_dir / agent.agent_id,
                 ): agent
                 for agent in (agent_a, agent_b)
@@ -258,7 +235,7 @@ def main() -> None:
     meta_file = results_dir / "experiment_meta.json"
     meta = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "model": model_name,
+        "model": "claude-code",  # Using host machine's Claude Code authentication
         "n_pairs": n_pairs,
         "hs_key": hs_key[:12] + "...",
         "intent_a_count": n_pairs,
